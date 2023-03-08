@@ -6,4 +6,5 @@ obj-y += oplus_touchscreen/
 obj-y += touch.o
 #endif
 obj-y  += oplus_fp_drivers/
-obj-y				+= tri_state_key/
+obj-y  += tri_state_key/
+obj-y	+=  project_info/
