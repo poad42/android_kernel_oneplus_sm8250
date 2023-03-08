@@ -89,6 +89,7 @@ config PREVENT_FIRMWARE_BUILD
 	    o CONFIG_SCSI_AIC79XX through CONFIG_AIC79XX_BUILD_FIRMWARE
 
 source "drivers/base/firmware_loader/Kconfig"
+source "drivers/base/kernelFwUpdate/Kconfig"
 
 config FW_CACHE
        bool "Enable firmware caching during suspend"

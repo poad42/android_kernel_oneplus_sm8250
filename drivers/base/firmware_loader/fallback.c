@@ -86,12 +86,11 @@ static void __fw_load_abort(struct fw_priv *fw_priv)
 {
 	/*
 	 * There is a small window in which user can write to 'loading'
-	 * between loading done and disappearance of 'loading'
+	 * between loading done/aborted and disappearance of 'loading'
 	 */
-	if (fw_sysfs_done(fw_priv))
+	if (fw_state_is_aborted(fw_priv) || fw_sysfs_done(fw_priv))
 		return;
 
-	list_del_init(&fw_priv->pending_list);
 	fw_state_aborted(fw_priv);
 }
 
@@ -297,7 +296,6 @@ static ssize_t firmware_loading_store(struct device *dev,
 			 * Same logic as fw_load_abort, only the DONE bit
 			 * is ignored and we set ABORT only on failure.
 			 */
-			list_del_init(&fw_priv->pending_list);
 			if (rc) {
 				fw_state_aborted(fw_priv);
 				written = rc;
@@ -546,6 +544,10 @@ static int fw_load_sysfs_fallback(struct fw_sysfs *fw_sysfs,
 	struct device *f_dev = &fw_sysfs->dev;
 	struct fw_priv *fw_priv = fw_sysfs->fw_priv;
 
+#ifdef OPLUS_FEATURE_TP_BSPFWUPDATE
+	char *envp[2]={"FwUp=compare", NULL};
+#endif/*OPLUS_FEATURE_TP_BSPFWUPDATE*/
+
 	/* fall back on userspace loading */
 	if (!fw_priv->data)
 		fw_priv->is_paged_buf = true;
@@ -559,6 +561,11 @@ static int fw_load_sysfs_fallback(struct fw_sysfs *fw_sysfs,
 	}
 
 	mutex_lock(&fw_lock);
+	if (fw_state_is_aborted(fw_priv)) {
+		mutex_unlock(&fw_lock);
+		retval = -EINTR;
+		goto out;
+	}
 	list_add(&fw_priv->pending_list, &pending_fw_head);
 	mutex_unlock(&fw_lock);
 
@@ -566,7 +573,15 @@ static int fw_load_sysfs_fallback(struct fw_sysfs *fw_sysfs,
 		fw_priv->need_uevent = true;
 		dev_set_uevent_suppress(f_dev, false);
 		dev_dbg(f_dev, "firmware: requesting %s\n", fw_priv->fw_name);
+#ifdef OPLUS_FEATURE_TP_BSPFWUPDATE
+		if (opt_flags & FW_OPT_COMPARE) {
+			kobject_uevent_env(&fw_sysfs->dev.kobj, KOBJ_CHANGE,envp);
+		} else {
+			kobject_uevent(&fw_sysfs->dev.kobj, KOBJ_ADD);
+		}
+#else
 		kobject_uevent(&fw_sysfs->dev.kobj, KOBJ_ADD);
+#endif/*OPLUS_FEATURE_TP_BSPFWUPDATE*/
 	} else {
 		timeout = MAX_JIFFY_OFFSET;
 	}
@@ -581,11 +596,10 @@ static int fw_load_sysfs_fallback(struct fw_sysfs *fw_sysfs,
 	if (fw_state_is_aborted(fw_priv)) {
 		if (retval == -ERESTARTSYS)
 			retval = -EINTR;
-		else
-			retval = -EAGAIN;
 	} else if (fw_priv->is_paged_buf && !fw_priv->data)
 		retval = -ENOMEM;
 
+out:
 	device_del(f_dev);
 err_put_dev:
 	put_device(f_dev);
