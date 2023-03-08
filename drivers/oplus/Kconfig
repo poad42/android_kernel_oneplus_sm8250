@@ -37,3 +37,5 @@ source "drivers/oplus/aw8697_haptic/Kconfig"
 obj-$(CONFIG_TOUCHPANEL_OPLUS) += oplus_touchscreen/
 obj-$(CONFIG_TOUCHPANEL_OPLUS) += touch.o
 #endif
+
+source "drivers/input/oplus_fp_drivers/Kconfig"

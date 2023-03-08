@@ -5,3 +5,4 @@ obj-y += aw8697_haptic/
 obj-y += oplus_touchscreen/
 obj-y += touch.o
 #endif
+obj-$(CONFIG_OPLUS_FINGERPRINT)  += oplus_fp_drivers/
