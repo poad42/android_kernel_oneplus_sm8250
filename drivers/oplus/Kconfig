@@ -28,5 +28,7 @@ config OPLUS_CHARGER_WIRELESS_PEN
 	help
 	  Say Y to include support
 
-source "drivers/power/oplus/Kconfig"
+source "drivers/oplus/power/Kconfig"
 #endif
+
+source "drivers/oplus/aw8697_haptic/Kconfig"
